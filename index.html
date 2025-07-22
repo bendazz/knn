@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Nearest Neighbors Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        select, button {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        button {
+            background-color: #007acc;
+            color: white;
+            border-color: #007acc;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover:not(:disabled) {
+            background-color: #005999;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            border-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .reset-btn {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        
+        .reset-btn:hover {
+            background-color: #c82333;
+        }
+        
+        #visualization {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .plot-area {
+            border: 2px solid #333;
+            border-radius: 5px;
+            background-color: #fafafa;
+            cursor: crosshair;
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            border-left: 4px solid #007acc;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .instructions ul {
+            margin-bottom: 0;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            min-height: 20px;
+        }
+        
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>K-Nearest Neighbors Algorithm Visualization</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="k-value">K Value:</label>
+                <select id="k-value">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3" selected>3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="mixing-level">Mixing Level:</label>
+                <select id="mixing-level">
+                    <option value="0">None (Distinct Clusters)</option>
+                    <option value="0.15">Low</option>
+                    <option value="0.3" selected>Medium</option>
+                    <option value="0.45">High</option>
+                    <option value="0.6">Very High</option>
+                </select>
+            </div>
+            
+            <button id="regenerate-btn">Regenerate Data</button>
+            <button id="find-neighbors-btn" disabled>Find K-Nearest Neighbors</button>
+            <button id="classify-btn" disabled>Classify Point</button>
+            <button id="reset-btn" class="reset-btn">Reset</button>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff6b6b;"></div>
+                <span>Class A (Red)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4ecdc4;"></div>
+                <span>Class B (Teal)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #45b7d1;"></div>
+                <span>Class C (Blue)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #96ceb4;"></div>
+                <span>Class D (Green)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #333; border: 2px solid #666;"></div>
+                <span>New Point (Unclassified)</span>
+            </div>
+        </div>
+        
+        <div id="visualization"></div>
+        
+        <div class="status info" id="status">
+            Click anywhere on the plot to add a new point to classify
+        </div>
+        
+        <div class="instructions">
+            <h3>How to Use:</h3>
+            <ul>
+                <li><strong>Step 1:</strong> Select your desired K value (1-5) and mixing level</li>
+                <li><strong>Step 2:</strong> Click "Regenerate Data" to see different data distributions</li>
+                <li><strong>Step 3:</strong> Click anywhere on the plot to add a new black point</li>
+                <li><strong>Step 4:</strong> Click "Find K-Nearest Neighbors" to see lines connecting to the closest points</li>
+                <li><strong>Step 5:</strong> Click "Classify Point" to see the predicted classification based on majority vote</li>
+                <li><strong>Step 6:</strong> Click "Reset" to clear the classification and try a different point</li>
+            </ul>
+            <p><strong>Mixing Levels:</strong> Try different mixing levels to see how overlapping classes affect KNN performance. Higher mixing creates more ambiguous classification scenarios.</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
